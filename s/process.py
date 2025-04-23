@@ -10,13 +10,13 @@ seat_df = pd.DataFrame(columns=["data-price", "description", "section", "row", "
 place_df = pd.DataFrame(columns=["section", "place", "offerId"])
 price_df = pd.DataFrame(columns=["offerId", "name", "totalPrice"])
 
-with open("data1.html", "r", encoding="utf-8") as file:
+with open("../data1.html", "r", encoding="utf-8") as file:
     content = file.read()
 
 tree = html.fromstring(content)
 current_date = datetime.date.today()
 
-with open("facets.json", "r") as file:
+with open("../facets.json", "r") as file:
     data = json.load(file)
 
 # seat df
@@ -35,7 +35,7 @@ for (i, facet) in enumerate(facets, 1):
 
     place_df.loc[i] = [section_name, places, offers]
 
-with open("offer.json", "r") as file:
+with open("../offer.json", "r") as file:
     data = json.load(file)
 
 # price df

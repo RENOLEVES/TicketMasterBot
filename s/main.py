@@ -65,7 +65,7 @@ for request in driver.requests:
                     json_data = json.loads(response_data)  # 转换为 JSON
 
                     # 保存数据
-                    with open("facets.json", "w", encoding="utf-8") as f:
+                    with open("../facets.json", "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2)
                     print("✅ successfully saved facets data：facets.json")
             else:
@@ -82,7 +82,7 @@ for request in driver.requests:
                     json_data = json.loads(response_data)  # 转换为 JSON
 
                     # 保存数据
-                    with open("offer.json", "w", encoding="utf-8") as f:
+                    with open("../offer.json", "w", encoding="utf-8") as f:
                         json.dump(json_data, f, indent=2)
                     print("✅ successfully saved facets data：offer.json")
             else:
@@ -90,7 +90,7 @@ for request in driver.requests:
 
 
 html = driver.page_source
-file_path = r"./data1.html"
+file_path = r"../data1.html"
 
 with open(file_path, "w", encoding="utf-8") as f:
     f.write(html)
