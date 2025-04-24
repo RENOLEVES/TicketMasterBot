@@ -17,7 +17,6 @@ public class Map {
     private String _id;
     private List<Seat> seats;
     private String branding;
-    private Offer offer;
     @ToString.Exclude @EqualsAndHashCode.Exclude
     private String shape = "";
 
@@ -28,10 +27,7 @@ public class Map {
         private String section;
         private String row;
         private String place;
-        @ToString.Exclude
-        @EqualsAndHashCode.Exclude
-        private String shape = "";
-        private String price;
+        private Offer offer;
     }
 
     @Data

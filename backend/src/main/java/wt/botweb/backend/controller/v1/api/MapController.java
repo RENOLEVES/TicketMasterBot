@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import wt.botweb.backend.dto.response.Response;
 import wt.botweb.backend.service.MapService;
+import wt.botweb.backend.service.implementation.MapServiceImpl;
 
 import java.util.List;
 
@@ -12,12 +13,12 @@ import java.util.List;
 @RequestMapping("/seatMap")
 public class MapController {
 
-    private final MapService mapService;
+    private final MapServiceImpl mapService;
     @GetMapping
     public Response<?> getMaps() {
         return Response
                 .ok()
-                .setPayload(MapService.getMaps());
+                .setPayload(mapService.getMaps());
     }
 
     @GetMapping("/{artist_name}={id}")

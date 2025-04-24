@@ -45,8 +45,6 @@ if zoom_btn:
     zoom_btn.click()
 
 time.sleep(2)
-count = 0
-count1 = 0
 
 # 捕获所有请求
 for request in driver.requests:
