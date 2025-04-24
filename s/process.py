@@ -85,7 +85,7 @@ for block in svg_blocks:
 title = tree.xpath('//title[normalize-space()]')[0].text
 
 # artist_name = re.match("(.*?):", title).group(1)
-artist_name = "BlackPink"
+artist_name = "BIBI"
 
 if not os.path.isdir(f"../data/price/{artist_name}"):
     os.makedirs(f"../data/price/{artist_name}")

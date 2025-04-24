@@ -22,19 +22,17 @@ driver = Chrome(options=options)
 
 # url = "https://www.ticketmaster.ca/kip-moore-solitary-tracks-tour-toronto-ontario-04-24-2025/event/1000623BC2FF1C57"
 
-# url = "https://www.ticketmaster.ca/2025-bibi-1st-world-tour-eve-toronto-ontario-06-05-2025/event/10006265B9D820B1"
+url = "https://www.ticketmaster.ca/2025-bibi-1st-world-tour-eve-toronto-ontario-06-05-2025/event/10006265B9D820B1"
 
 #black pink
-url = "https://www.ticketmaster.ca/blackpink-2025-world-tour-toronto-ontario-07-22-2025/event/10006252DC87273D"
+# url = "https://www.ticketmaster.ca/blackpink-2025-world-tour-toronto-ontario-07-22-2025/event/10006252DC87273D"
 driver.get(url)
-
-time.sleep(10) # Give it time to bypass the verification page
 
 driver.execute_script("document.body.style.zoom='50%'")
 
 # accept cookies
 locator = (By.XPATH, '//button[.//span[normalize-space(text())="Accept & Continue"]]')
-button = WebDriverWait(driver,20).until(EC.element_to_be_clickable(locator))
+button = WebDriverWait(driver,25).until(EC.element_to_be_clickable(locator))
 if button:
     button.click()
 
@@ -42,7 +40,7 @@ time.sleep(1)
 
 # zoom in the map
 zoom_btn_locator = (By.XPATH,'//button[@aria-label="Zoom In on Interactive Seat Map"]')
-zoom_btn = WebDriverWait(driver,20).until(EC.element_to_be_clickable(zoom_btn_locator))
+zoom_btn = WebDriverWait(driver,25).until(EC.element_to_be_clickable(zoom_btn_locator))
 if zoom_btn:
     zoom_btn.click()
 
@@ -97,6 +95,6 @@ with open(file_path, "w", encoding="utf-8") as f:
 
 print("data written")
 
-# normal exit
-time.sleep(2)
 driver.quit()
+
+
