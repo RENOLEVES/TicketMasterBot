@@ -87,21 +87,21 @@ title = tree.xpath('//title[normalize-space()]')[0].text
 # artist_name = re.match("(.*?):", title).group(1)
 artist_name = "BlackPink"
 
-if not os.path.isdir(f"data/price/{artist_name}"):
-    os.makedirs(f"data/price/{artist_name}")
+if not os.path.isdir(f"../data/price/{artist_name}"):
+    os.makedirs(f"../data/price/{artist_name}")
 
-if not os.path.isdir(f"data/seat/{artist_name}"):
-    os.makedirs(f"data/seat/{artist_name}")
+if not os.path.isdir(f"../data/seat/{artist_name}"):
+    os.makedirs(f"../data/seat/{artist_name}")
 
-if not os.path.isdir(f"data/place/{artist_name}"):
-    os.makedirs(f"data/place/{artist_name}")
+if not os.path.isdir(f"../data/place/{artist_name}"):
+    os.makedirs(f"../data/place/{artist_name}")
 
-if not os.path.isdir(f"data/result/{artist_name}"):
-    os.makedirs(f"data/result/{artist_name}")
+if not os.path.isdir(f"../data/result/{artist_name}"):
+    os.makedirs(f"../data/result/{artist_name}")
 
-seat_df.to_excel(f"data/seat/{artist_name}/{current_date}.xlsx", index=False)
-price_df.to_excel(f"data/price/{artist_name}/{current_date}.xlsx", index=False)
-place_df.to_excel(f"data/place/{artist_name}/{current_date}.xlsx", index=False)
+seat_df.to_excel(f"../data/seat/{artist_name}/{current_date}.xlsx", index=False)
+price_df.to_excel(f"../data/price/{artist_name}/{current_date}.xlsx", index=False)
+place_df.to_excel(f"../data/place/{artist_name}/{current_date}.xlsx", index=False)
 
 place_df.dropna(subset="place", inplace=True)
 
