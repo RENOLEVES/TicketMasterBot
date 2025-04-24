@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 type SectionLabel = 'Floor1' | 'Floor2' | 'Floor3' | 'Floor4' | 'Floor5' | 'Balcony';
 
 interface Seat {
+    id: string; // 新增唯一ID
     x: number;
     y: number;
     color: string;
@@ -137,7 +138,7 @@ const TheaterSeating = () => {
                 const localY = row * layout.seatSpacing;
 
                 // 应用旋转
-                const rotatedX = layout.startX + localX * cos - localY * sin;
+                const rotatedX = layout.startX + localX * cos ;
                 const rotatedY = layout.startY + localX * sin + localY * cos;
 
                 // 计算座位号
@@ -146,6 +147,7 @@ const TheaterSeating = () => {
                     : col + 1;
 
                 seats.push({
+                    id: `${layout.label}-R${row + 1}-S${seatNumber}`, // 生成唯一ID
                     x: rotatedX,
                     y: rotatedY,
                     color: 'white',
@@ -168,6 +170,7 @@ const TheaterSeating = () => {
                 // 常规区域生成
                 return Array.from({ length: section.rows }, (_, row) =>
                     Array.from({ length: section.rowColumns?.[row] || 15 }, (_, col) => ({
+                        id: `${section.label}-R${row + 1}-S${col + 1}`, // 生成唯一ID
                         x: section.startX + col * section.rowSpacing,
                         y: section.startY + row * section.seatSpacing,
                         color: 'white',
@@ -207,7 +210,7 @@ const TheaterSeating = () => {
     };
 
     const drawTooltip = (ctx: CanvasRenderingContext2D, seat: Seat) => {
-        const text = `Section: ${seat.section}\nRow: ${seat.row}\nSeat: ${seat.column}`;
+        const text = `ID: ${seat.id}\nSection: ${seat.section}\nRow: ${seat.row}\nSeat: ${seat.column}`;
         const padding = 10;
         const lineHeight = 20;
         const lines = text.split('\n');
@@ -278,26 +281,26 @@ const TheaterSeating = () => {
             THEATER_LAYOUT.stage.height
         );
 
-        // 绘制所有座位（改为方形）
+        // 绘制所有座位（带旋转）
         seats.forEach(seat => {
-            ctx.beginPath();
-            const halfSize = THEATER_LAYOUT.seatSize / 2;
-            // 绘制方形座位
+            const sectionLayout = THEATER_LAYOUT.sections.find(s => s.label === seat.section);
+            const rotation = sectionLayout?.rotation || 0;
+            const rad = (rotation * Math.PI) / 180;
+
+            ctx.save();
+            ctx.translate(seat.x, seat.y);
+            ctx.rotate(rad);
+
+            const size = THEATER_LAYOUT.seatSize;
+            const halfSize = size / 2;
+
             ctx.fillStyle = seat.color;
             ctx.strokeStyle = '#666';
             ctx.lineWidth = 1;
-            ctx.fillRect(
-                seat.x - halfSize, // X起始位置
-                seat.y - halfSize, // Y起始位置
-                THEATER_LAYOUT.seatSize, // 宽度
-                THEATER_LAYOUT.seatSize  // 高度
-            );
-            ctx.strokeRect(
-                seat.x - halfSize,
-                seat.y - halfSize,
-                THEATER_LAYOUT.seatSize,
-                THEATER_LAYOUT.seatSize
-            );
+            ctx.fillRect(-halfSize, -halfSize, size, size);
+            ctx.strokeRect(-halfSize, -halfSize, size, size);
+
+            ctx.restore();
         });
 
         // 绘制悬停提示
