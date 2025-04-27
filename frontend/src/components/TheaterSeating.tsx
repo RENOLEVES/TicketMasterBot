@@ -1,7 +1,8 @@
 // src/components/TheaterSeating.tsx
 import React, { useRef, useEffect, useState } from 'react';
 
-type SectionLabel = 'Floor1' | 'Floor2' | 'Floor3' | 'Floor4' | 'Floor5' | 'Balcony';
+type SectionLabel = 'FLOOR 1' | 'FLOOR 2' | 'FLOOR 3' | 'FLOOR 4' | 'FLOOR 5'
+                    |'GRANDSTAND 1'| 'GRANDSTAND 2'| 'GRANDSTAND 3'| 'GRANDSTAND 4'| 'GRANDSTAND 5';
 
 interface Seat {
     id: string; // 新增唯一ID
@@ -36,80 +37,120 @@ const TheaterSeating = () => {
     const THEATER_LAYOUT = {
         seatSize: 12,
         spacing: 40,
-        canvasWidth: 1600,
+        canvasWidth: 1900,
         canvasHeight: 2000,
         stage: {
-            width: 500,
+            width: 700,
             height: 120,
-            x: 550,
+            x: 600,
             y: 60
         },
         sections: [
             {
-                label: 'Floor5',
-                rows: 6,
-                rowColumns: [3, 5, 7, 9, 11, 12],
-                maxColumns: 12,
+                label: 'FLOOR 5',
+                rows: 18,
+                rowColumns: [3, 5, 7, 9, 11, 12, 16, 16, 16, 16,16,16,16,16,15,10,8,4],
+                maxColumns: 16,
                 rowSpacing: 20,
-                seatSpacing: 25,
+                seatSpacing: 30,
                 position: 'leftleft',
-                rotation: 20,    // 向左旋转15度
+                rotation: 30,    // 向左旋转15度
                 direction: 'rtl', // 从右向左排列
                 startX: 70,      // 自定义起始点
-                startY: 225
+                startY: 150
             },
             {
-                label: 'Floor4',
-                rows: 15,
-                rowColumns: Array(15).fill(15),
+                label: 'FLOOR 4',
+                rows: 21,
+                rowColumns: Array(21).fill(16),
                 rowSpacing: 20,
                 seatSpacing: 25,
                 position: 'left',
-                startX: 300,
+                startX: 400,
                 startY: 300
             },
             {
-                label: 'Floor3',
-                rows: 15,
-                rowColumns: Array(15).fill(15),
+                label: 'FLOOR 3',
+                rows: 21,
+                rowColumns: Array(21).fill(16),
                 rowSpacing: 20,
                 seatSpacing: 25,
                 position: 'center',
-                startX: 625,
+                startX: 775,
                 startY: 300
             },
             {
-                label: 'Floor2',
-                rows: 15,
-                rowColumns: Array(15).fill(15),
+                label: 'FLOOR 2',
+                rows: 21,
+                rowColumns: Array(21).fill(16),
                 rowSpacing: 20,
                 seatSpacing: 25,
                 position: 'right',
-                startX: 950,
+                startX: 1150,
                 startY: 300
             },
             {
-                label: 'Floor1',
-                rows: 6,
-                rowColumns: [3, 5, 7, 9, 11, 12],
-                maxColumns: 12,
+                label: 'FLOOR 1',
+                rows: 18,
+                rowColumns: [3, 5, 7, 9, 11, 12, 16, 16, 16, 16,16,16,16,16,15,10,8,4],
+                maxColumns: 16,
                 rowSpacing: 20,
-                seatSpacing: 25,
+                seatSpacing: 30,
                 position: 'rightright',
-                rotation: -20,     // 向右旋转15度
+                rotation: -30,     // 向右旋转15度
                 direction: 'ltr', // 从左向右排列
-                startX: 1275,
-                startY: 300
+                startX: 1500,
+                startY: 310
             },
             {
-                label: 'Balcony',
-                rows: 15,
-                rowColumns: Array(15).fill(15),
+                label: 'GRANDSTAND 1',
+                rows: 21,
+                rowColumns: Array(21).fill(8),
                 rowSpacing: 20,
                 seatSpacing: 25,
                 position: 'rear',
-                startX: 625,
-                startY: 800
+                startX: 1550,
+                startY: 900
+            },
+            {
+                label: 'GRANDSTAND 2',
+                rows: 21,
+                rowColumns: Array(21).fill(18),
+                rowSpacing: 20,
+                seatSpacing: 25,
+                position: 'rear',
+                startX: 1150,
+                startY: 900
+            },
+            {
+                label: 'GRANDSTAND 3',
+                rows: 21,
+                rowColumns: Array(21).fill(16),
+                rowSpacing: 20,
+                seatSpacing: 25,
+                position: 'rear',
+                startX: 775,
+                startY: 900
+            },
+            {
+                label: 'GRANDSTAND 4',
+                rows: 21,
+                rowColumns: Array(21).fill(18),
+                rowSpacing: 20,
+                seatSpacing: 25,
+                position: 'rear',
+                startX: 360,
+                startY: 900
+            },
+            {
+                label: 'GRANDSTAND 5',
+                rows: 21,
+                rowColumns: Array(21).fill(8),
+                rowSpacing: 20,
+                seatSpacing: 25,
+                position: 'rear',
+                startX: 155,
+                startY: 900
             }
         ] as SectionLayout[]
     };
@@ -163,7 +204,7 @@ const TheaterSeating = () => {
     useEffect(() => {
         const generateAllSeats = () => {
             return THEATER_LAYOUT.sections.flatMap(section => {
-                if (['Floor1', 'Floor5'].includes(section.label)) {
+                if (['FLOOR 1', 'FLOOR 5'].includes(section.label)) {
                     return generateRotatedSeats(section);
                 }
 
