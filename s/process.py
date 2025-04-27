@@ -3,22 +3,35 @@ import os.path
 from lxml import html
 from utils import expand_custom
 import pandas as pd
-import re
 import json
 
 
 def process(artist_name):
-    seat_df = pd.DataFrame(columns=["data-price", "description", "section", "row", "branding", "place"])
+    seat_df = pd.DataFrame(columns=["description", "section", "row", "branding", "place"])
     place_df = pd.DataFrame(columns=["section", "place", "offerId"])
     price_df = pd.DataFrame(columns=["offerId", "name", "totalPrice"])
+    range_df = pd.DataFrame(columns=["offerId", "offer range"])
 
-    with open("../data1.html", "r", encoding="utf-8") as file:
+    with open("./data1.html", "r", encoding="utf-8") as file:
         content = file.read()
 
     tree = html.fromstring(content)
     current_date = datetime.date.today()
 
-    with open("../facets.json", "r") as file:
+    # with open("../priceRange.json","r") as file:
+    #     data = json.load(file)
+    #
+    # facets = data['facets']
+    #
+    # for (i, facet) in enumerate(facets, 1):
+    #     offers = facet['offers']
+    #
+    #     price_range = facet['totalPriceRange'][0]
+    #     minp = price_range['min']
+    #     maxp = price_range['max']
+    #     range_df.loc[i] = [offers, f"({minp},{maxp})"]
+
+    with open("./facets.json", "r") as file:
         data = json.load(file)
 
     # seat df
@@ -37,7 +50,7 @@ def process(artist_name):
 
         place_df.loc[i] = [section_name, places, offers]
 
-    with open("../offer.json", "r") as file:
+    with open("./offer.json", "r") as file:
         data = json.load(file)
 
     # price df
@@ -80,7 +93,7 @@ def process(artist_name):
                 else:
                     branding = "Not available"
 
-                seat_df.loc[i] = [0, f"Sec {section_name} • Row {row_name} • Seat {seat_name}", section_name, row_name,
+                seat_df.loc[i] = [f"Sec {section_name} • Row {row_name} • Seat {seat_name}", section_name, row_name,
                                   branding, place]
                 i = i + 1
 
@@ -93,12 +106,16 @@ def process(artist_name):
     if not os.path.isdir(f"./data/place/{artist_name}"):
         os.makedirs(f"./data/place/{artist_name}")
 
+    # if not os.path.isdir(f"./data/range/{artist_name}"):
+    #     os.makedirs(f"./data/range/{artist_name}")
+
     if not os.path.isdir(f"./data/result/{artist_name}"):
         os.makedirs(f"./data/result/{artist_name}")
 
     seat_df.to_excel(f"./data/seat/{artist_name}/{current_date}.xlsx", index=False)
     price_df.to_excel(f"./data/price/{artist_name}/{current_date}.xlsx", index=False)
     place_df.to_excel(f"./data/place/{artist_name}/{current_date}.xlsx", index=False)
+    # range_df.to_excel(f"./data/range/{artist_name}/{current_date}.xlsx", index=False)
 
     place_df.dropna(subset="place", inplace=True)
 
@@ -155,4 +172,4 @@ def process(artist_name):
     # result = result[['data-price', 'description', 'branding']]
     # result.to_excel(f"data/result/{artist_name}/{current_date}.xlsx", index=False)
 if __name__ == "__main__":
-    process("Sarah McLachlan")
+    process("Taylor Swift")

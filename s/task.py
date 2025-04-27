@@ -26,17 +26,17 @@ Chris_Brown = {
 }
 
 
-# already happened.
-# Taylor_Swift = {
-#     "name":"Taylor Swift",
-#     "url":r"https://www.ticketmaster.ca/the-story-of-taylor-swift-pickering-ontario-04-25-2025/event/100061859FC01609"
-# }
+Taylor_Swift = {
+    "name":"Taylor Swift",
+    "url":r"https://www.ticketmaster.ca/jimmy-moore-personnifie-taylor-swift-montreal-quebec-05-24-2025/event/3100623BB9BC24FD"
+}
 
 pipeline = [
     Keyshia_Cole,
     Sarah_McLachlan,
     Black_Pink,
     Chris_Brown,
+    # Taylor_Swift
 ]
 
 for task in pipeline:

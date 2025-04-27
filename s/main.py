@@ -28,7 +28,7 @@ def fetch_data(url):
 
     button_locators = [
         (By.XPATH, '//button[.//span[normalize-space(text())="Accept & Continue"]]'),
-        (By.XPATH, '//button[.//span[normalize-space(text())="I Agree"]]')
+        (By.XPATH, '//button[@data-bdd="accept-modal-accept-button"]')
     ]
 
     wait = WebDriverWait(driver, 20)
@@ -39,6 +39,9 @@ def fetch_data(url):
     )
     button.click()
 
+    offer_card_locator = (By.XPATH, '//div[@data-analytics="offer-card"]')
+    WebDriverWait(driver, 25).until(EC.visibility_of_any_elements_located(offer_card_locator))
+
     time.sleep(1)
 
     # zoom in the map
@@ -47,7 +50,7 @@ def fetch_data(url):
     if zoom_btn:
         zoom_btn.click()
 
-    time.sleep(2)
+    time.sleep(10)
 
     # 捕获所有请求
     for request in driver.requests:
@@ -64,7 +67,7 @@ def fetch_data(url):
                         json_data = json.loads(response_data)  # 转换为 JSON
 
                         # 保存数据
-                        with open("../facets.json", "w", encoding="utf-8") as f:
+                        with open("./facets.json", "w", encoding="utf-8") as f:
                             json.dump(json_data, f, indent=2)
                         print("✅ successfully saved facets data：facets.json")
                 else:
@@ -81,14 +84,32 @@ def fetch_data(url):
                         json_data = json.loads(response_data)  # 转换为 JSON
 
                         # 保存数据
-                        with open("../offer.json", "w", encoding="utf-8") as f:
+                        with open("./offer.json", "w", encoding="utf-8") as f:
                             json.dump(json_data, f, indent=2)
                         print("✅ successfully saved facets data：offer.json")
                 else:
                     print("⚠️ convert error")
 
+            if "services.ticketmaster.ca/api/ismds/event" in request.url and "facets?apikey=" in request.url:
+                print("✅ capture facets request URL：", request.url)
+                if "gzip" in request.response.headers.get('Content-Encoding', ''):
+                    # 解压 GZIP 响应
+                    compressed_data = request.response.body
+                    with gzip.GzipFile(fileobj=BytesIO(compressed_data), mode='rb') as f:
+                        data = f.read()
+                        response_data = data.decode('utf-8')  # 解码为 UTF-8 字符串
+                        json_data = json.loads(response_data)  # 转换为 JSON
+
+                        # 保存数据
+                        with open("./offer.json", "w", encoding="utf-8") as f:
+                            json.dump(json_data, f, indent=2)
+                        print("✅ successfully saved facets data：offer.json")
+                else:
+                    print("⚠️ convert error")
+
+
     html = driver.page_source
-    file_path = r"../data1.html"
+    file_path = r"./data1.html"
 
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(html)
