@@ -7,92 +7,92 @@ import time
 import gzip
 import json
 
-options = ChromeOptions()
-options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument("--disable-gpu")
-options.add_argument("--no-sandbox")
-options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
-    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
 
-options.add_argument('--ignore-certificate-errors')
-options.add_argument('--incognito')  # 使用隐身模式
-options.add_argument('--disable-extensions')  # 禁用扩展程序
+def fetch_data(url):
+    options = ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+        AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
 
-driver = Chrome(options=options)
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--incognito')  # 使用隐身模式
+    options.add_argument('--disable-extensions')  # 禁用扩展程序
 
-# url = "https://www.ticketmaster.ca/kip-moore-solitary-tracks-tour-toronto-ontario-04-24-2025/event/1000623BC2FF1C57"
+    driver = Chrome(options=options)
 
-url = "https://www.ticketmaster.ca/2025-bibi-1st-world-tour-eve-toronto-ontario-06-05-2025/event/10006265B9D820B1"
+    driver.get(url)
 
-#black pink
-# url = "https://www.ticketmaster.ca/blackpink-2025-world-tour-toronto-ontario-07-22-2025/event/10006252DC87273D"
-driver.get(url)
+    driver.execute_script("document.body.style.zoom='50%'")
 
-driver.execute_script("document.body.style.zoom='50%'")
+    button_locators = [
+        (By.XPATH, '//button[.//span[normalize-space(text())="Accept & Continue"]]'),
+        (By.XPATH, '//button[.//span[normalize-space(text())="I Agree"]]')
+    ]
 
-# accept cookies
-locator = (By.XPATH, '//button[.//span[normalize-space(text())="Accept & Continue"]]')
-button = WebDriverWait(driver,25).until(EC.element_to_be_clickable(locator))
-if button:
+    wait = WebDriverWait(driver, 20)
+    button = wait.until(
+        EC.any_of(
+            *[EC.presence_of_element_located(locator) for locator in button_locators]
+        )
+    )
     button.click()
 
-time.sleep(1)
+    time.sleep(1)
 
-# zoom in the map
-zoom_btn_locator = (By.XPATH,'//button[@aria-label="Zoom In on Interactive Seat Map"]')
-zoom_btn = WebDriverWait(driver,25).until(EC.element_to_be_clickable(zoom_btn_locator))
-if zoom_btn:
-    zoom_btn.click()
+    # zoom in the map
+    zoom_btn_locator = (By.XPATH, '//button[@aria-label="Zoom In on Interactive Seat Map"]')
+    zoom_btn = WebDriverWait(driver, 25).until(EC.element_to_be_clickable(zoom_btn_locator))
+    if zoom_btn:
+        zoom_btn.click()
 
-time.sleep(2)
+    time.sleep(2)
 
-# 捕获所有请求
-for request in driver.requests:
-    if request.response:
-        # 检查是否是目标请求 URL
-        if "services.ticketmaster.ca/api/ismds/event" in request.url and "facets?by=section+seating" in request.url:
-            print("✅ capture facets request URL：", request.url)
-            if "gzip" in request.response.headers.get('Content-Encoding', ''):
-                # 解压 GZIP 响应
-                compressed_data = request.response.body
-                with gzip.GzipFile(fileobj=BytesIO(compressed_data), mode='rb') as f:
-                    data = f.read()
-                    response_data = data.decode('utf-8')  # 解码为 UTF-8 字符串
-                    json_data = json.loads(response_data)  # 转换为 JSON
+    # 捕获所有请求
+    for request in driver.requests:
+        if request.response:
+            # 检查是否是目标请求 URL
+            if "services.ticketmaster.ca/api/ismds/event" in request.url and "facets?by=section+seating" in request.url:
+                print("✅ capture facets request URL：", request.url)
+                if "gzip" in request.response.headers.get('Content-Encoding', ''):
+                    # 解压 GZIP 响应
+                    compressed_data = request.response.body
+                    with gzip.GzipFile(fileobj=BytesIO(compressed_data), mode='rb') as f:
+                        data = f.read()
+                        response_data = data.decode('utf-8')  # 解码为 UTF-8 字符串
+                        json_data = json.loads(response_data)  # 转换为 JSON
 
-                    # 保存数据
-                    with open("../facets.json", "w", encoding="utf-8") as f:
-                        json.dump(json_data, f, indent=2)
-                    print("✅ successfully saved facets data：facets.json")
-            else:
-                print("⚠️ convert error")
+                        # 保存数据
+                        with open("../facets.json", "w", encoding="utf-8") as f:
+                            json.dump(json_data, f, indent=2)
+                        print("✅ successfully saved facets data：facets.json")
+                else:
+                    print("⚠️ convert error")
 
-        if "offeradapter.ticketmaster.ca/api/ismds/event" in request.url and "facets?apikey=" in request.url:
-            print("✅ capture facets request URL：", request.url)
-            if "gzip" in request.response.headers.get('Content-Encoding', ''):
-                # 解压 GZIP 响应
-                compressed_data = request.response.body
-                with gzip.GzipFile(fileobj=BytesIO(compressed_data), mode='rb') as f:
-                    data = f.read()
-                    response_data = data.decode('utf-8')  # 解码为 UTF-8 字符串
-                    json_data = json.loads(response_data)  # 转换为 JSON
+            if "offeradapter.ticketmaster.ca/api/ismds/event" in request.url and "facets?apikey=" in request.url:
+                print("✅ capture facets request URL：", request.url)
+                if "gzip" in request.response.headers.get('Content-Encoding', ''):
+                    # 解压 GZIP 响应
+                    compressed_data = request.response.body
+                    with gzip.GzipFile(fileobj=BytesIO(compressed_data), mode='rb') as f:
+                        data = f.read()
+                        response_data = data.decode('utf-8')  # 解码为 UTF-8 字符串
+                        json_data = json.loads(response_data)  # 转换为 JSON
 
-                    # 保存数据
-                    with open("../offer.json", "w", encoding="utf-8") as f:
-                        json.dump(json_data, f, indent=2)
-                    print("✅ successfully saved facets data：offer.json")
-            else:
-                print("⚠️ convert error")
+                        # 保存数据
+                        with open("../offer.json", "w", encoding="utf-8") as f:
+                            json.dump(json_data, f, indent=2)
+                        print("✅ successfully saved facets data：offer.json")
+                else:
+                    print("⚠️ convert error")
 
+    html = driver.page_source
+    file_path = r"../data1.html"
 
-html = driver.page_source
-file_path = r"../data1.html"
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(html)
 
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write(html)
+    print("data written")
 
-print("data written")
-
-driver.quit()
-
-
+    driver.quit()
