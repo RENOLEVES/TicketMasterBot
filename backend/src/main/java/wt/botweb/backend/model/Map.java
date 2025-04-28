@@ -16,17 +16,16 @@ public class Map {
     @MongoId // mongodb implemented later
     private String _id;
     private List<Seat> seats;
-    private String branding;
-    @ToString.Exclude @EqualsAndHashCode.Exclude
-    private String shape = "";
 
     @Data
     @AllArgsConstructor
     public static class Seat {
         private String _id;
+        private String seat_id;
         private String section;
         private String row;
         private String place;
+        private String branding;
         private Offer offer;
     }
 
@@ -34,7 +33,7 @@ public class Map {
     @AllArgsConstructor
     public static class Offer {
         private String _id;
-        private String min;
-        private String max;
+        private String offer_id;
+        private String total_price;
     }
 }
