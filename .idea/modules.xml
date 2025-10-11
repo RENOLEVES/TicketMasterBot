@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../TicketMasterBot/.idea/TicketMasterBot.iml" filepath="$PROJECT_DIR$/../TicketMasterBot/.idea/TicketMasterBot.iml" />
+      <module fileurl="file://$PROJECT_DIR$/TicketMasterBot.iml" filepath="$PROJECT_DIR$/TicketMasterBot.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/TicketMasterBot.main.iml" filepath="$PROJECT_DIR$/.idea/modules/TicketMasterBot.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/TicketMasterBot.test.iml" filepath="$PROJECT_DIR$/.idea/modules/TicketMasterBot.test.iml" />
     </modules>
   </component>
 </project>
