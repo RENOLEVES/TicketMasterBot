@@ -7,25 +7,39 @@ plugins {
 
 group = 'com.ticketmaster'
 version = '1.0.0'
-sourceCompatibility = '17'
+
+java {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
+}
 
 repositories {
     mavenCentral()
 }
 
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.projectlombok:lombok:1.18.26'
-    implementation 'org.projectlombok:lombok:1.18.26'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
+    // 测试依赖
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo.spring30x:4.6.2'
+    testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.11.0'
 }
 
 application {
-    mainClassName = 'com.ticketmaster.TicketMasterBotApplication'
+    mainClass = 'com.ticketmaster.TicketMasterBotApplication'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

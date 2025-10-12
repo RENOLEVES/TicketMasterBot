@@ -31,12 +31,18 @@ Taylor_Swift = {
     "url":r"https://www.ticketmaster.ca/jimmy-moore-personnifie-taylor-swift-montreal-quebec-05-24-2025/event/3100623BB9BC24FD"
 }
 
+Twice = {
+    "name":"Twice",
+    "url":r"https://www.ticketmaster.ca/twice-this-is-for-world-tour-montreal-quebec-03-03-2026/event/3100633DAB346241"
+}
+
 pipeline = [
-    Keyshia_Cole,
-    Sarah_McLachlan,
-    Black_Pink,
-    Chris_Brown,
+    # Keyshia_Cole,
+    # Sarah_McLachlan,
+    # Black_Pink,
+    # Chris_Brown,
     # Taylor_Swift
+    Twice
 ]
 
 for task in pipeline:

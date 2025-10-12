@@ -1,6 +1,5 @@
 package com.ticketmaster.repo;
 
-import com.ticketmaster.models.ResultStatus;
 import com.ticketmaster.models.Result;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
@@ -17,9 +16,9 @@ public interface ResultRepository extends MongoRepository<Result, String> {
 
     List<Result> findByBranding(String branding);
 
-    List<Result> findByStatus(ResultStatus status);
+    List<Result> findByStatus(Result.ResultStatus status);
 
-    List<Result> findByBrandingAndStatus(String branding, ResultStatus status);
+    List<Result> findByBrandingAndStatus(String branding, Result.ResultStatus status);
 
     @Query("{ 'calculated_at': { $gte: ?0 } }")
     List<Result> findByCalculatedAtAfter(LocalDateTime dateTime);

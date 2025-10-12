@@ -60,6 +60,10 @@ public class Result {
     public ResultStatus getStatus() { return status; }
     public void setStatus(ResultStatus status) { this.status = status; }
 
+    public enum ResultStatus {
+        SUCCESS, FAILED, PENDING
+    }
+
     @Override
     public String toString() {
         return "Result{" +

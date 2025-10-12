@@ -12,13 +12,13 @@ def process(artist_name):
     price_df = pd.DataFrame(columns=["offerId", "name", "totalPrice"])
     range_df = pd.DataFrame(columns=["offerId", "offer range"])
 
-    with open("./data1.html", "r", encoding="utf-8") as file:
+    with open(r".\data1.html", "r", encoding="utf-8") as file:
         content = file.read()
 
     tree = html.fromstring(content)
     current_date = datetime.date.today()
 
-    # with open("../priceRange.json","r") as file:
+    # with open(r"..\priceRange.json","r") as file:
     #     data = json.load(file)
     #
     # facets = data['facets']
@@ -31,7 +31,7 @@ def process(artist_name):
     #     maxp = price_range['max']
     #     range_df.loc[i] = [offers, f"({minp},{maxp})"]
 
-    with open("./facets.json", "r") as file:
+    with open(r".\facets.json", "r") as file:
         data = json.load(file)
 
     # seat df
@@ -50,7 +50,7 @@ def process(artist_name):
 
         place_df.loc[i] = [section_name, places, offers]
 
-    with open("./offer.json", "r") as file:
+    with open(r".\offer.json", "r") as file:
         data = json.load(file)
 
     # price df
@@ -97,27 +97,24 @@ def process(artist_name):
                                   branding, place]
                 i = i + 1
 
-    if not os.path.isdir(f"./data/price/{artist_name}"):
-        os.makedirs(f"./data/price/{artist_name}")
+    # 创建目录 - Windows路径
+    base_dirs = [
+        rf".\data\price\{artist_name}",
+        rf".\data\seat\{artist_name}",
+        rf".\data\place\{artist_name}",
+        rf".\data\result\{artist_name}"
+    ]
 
-    if not os.path.isdir(f"./data/seat/{artist_name}"):
-        os.makedirs(f"./data/seat/{artist_name}")
+    for dir_path in base_dirs:
+        if not os.path.isdir(dir_path):
+            os.makedirs(dir_path)
 
-    if not os.path.isdir(f"./data/place/{artist_name}"):
-        os.makedirs(f"./data/place/{artist_name}")
+    # 保存文件 - Windows路径
+    seat_df.to_excel(rf".\data\seat\{artist_name}\{current_date}.xlsx", index=False)
+    price_df.to_excel(rf".\data\price\{artist_name}\{current_date}.xlsx", index=False)
+    place_df.to_excel(rf".\data\place\{artist_name}\{current_date}.xlsx", index=False)
 
-    # if not os.path.isdir(f"./data/range/{artist_name}"):
-    #     os.makedirs(f"./data/range/{artist_name}")
-
-    if not os.path.isdir(f"./data/result/{artist_name}"):
-        os.makedirs(f"./data/result/{artist_name}")
-
-    seat_df.to_excel(f"./data/seat/{artist_name}/{current_date}.xlsx", index=False)
-    price_df.to_excel(f"./data/price/{artist_name}/{current_date}.xlsx", index=False)
-    place_df.to_excel(f"./data/place/{artist_name}/{current_date}.xlsx", index=False)
-    # range_df.to_excel(f"./data/range/{artist_name}/{current_date}.xlsx", index=False)
-
-    place_df.dropna(subset="place", inplace=True)
+    place_df.dropna(subset=["place"], inplace=True)
 
     place_df["offerId"] = place_df["offerId"].apply(
         lambda x: x[0] if isinstance(x, list) else x
@@ -136,40 +133,8 @@ def process(artist_name):
     seat_df = seat_df[["data-price", "description", "branding"]]
 
     print(artist_name)
-    seat_df.to_excel(f"./data/result/{artist_name}/{current_date}.xlsx", index=False)
-    #
+    seat_df.to_excel(rf".\data\result\{artist_name}\{current_date}.xlsx", index=False)
 
-    #
-    # price_df.to_excel(f"data/price/{artist_name}/{current_date}.xlsx", index=False)
-    #
-    # with pd.ExcelWriter(f"data/seat/{artist_name}/{current_date}.xlsx", "xlsxwriter") as writer:
-    #     workbook = writer.book
-    #     worksheet = workbook.add_worksheet()
-    #     writer.sheets["sheet1"] = worksheet
-    #
-    #     seat_df.to_excel(writer,startrow=1, index=False)
-    #
-    #
-    # del seat_df["data-price"]
-    #
-    # price_df.loc[price_df['branding'].str.contains("Standard Ticket"),"branding"] = "Standard Admission"
-    #
-    # price_df = price_df.dropna(subset=['row','section'])
-    #
-    # print("price_df", price_df.head(5))
-    # price_df.drop(columns=['description'], inplace=True)
-    #
-    # result = pd.merge(seat_df, price_df, on=['section', 'row', 'branding'], how='left')
-    #
-    # result = pd.merge(result, price_df[['section', 'row', 'data-price']],
-    #                   on=['section', 'row'],
-    #                   how='left',
-    #                   suffixes=('', '_df2'))
-    #
-    # result.loc[(result['branding'] == 'Standard Admission') &
-    #            (result['data-price'].isna()), 'data-price'] = result['data-price_df2']
-    #
-    # result = result[['data-price', 'description', 'branding']]
-    # result.to_excel(f"data/result/{artist_name}/{current_date}.xlsx", index=False)
+
 if __name__ == "__main__":
-    process("Taylor Swift")
+    process("Twice")
