@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TicketWatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #07070d;
+    --surface:   #0e0e1a;
+    --surface2:  #141424;
+    --border:    #1e1e36;
+    --accent:    #ff3b5c;
+    --accent2:   #7c3aed;
+    --green:     #00e5a0;
+    --yellow:    #ffc947;
+    --text:      #e8e8f0;
+    --muted:     #5a5a7a;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Titlebar ── */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  #titlebar .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--sans); font-weight: 800; font-size: 15px;
+    letter-spacing: 0.05em;
+  }
+  #titlebar .logo .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(0.8)} }
+
+  #titlebar .win-controls {
+    display: flex; gap: 8px;
+    -webkit-app-region: no-drag;
+  }
+  .win-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .win-btn:hover { background: var(--border); color: var(--text); }
+  .win-btn.close:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Layout ── */
+  #app { display: flex; height: calc(100vh - 44px); }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0 20px;
+    margin-bottom: 10px;
+  }
+
+  .field { padding: 0 20px; margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: .08em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+  }
+  .field input::placeholder { color: var(--muted); }
+  .field select option { background: var(--surface2); }
+
+  /* Hide number input spinners */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field { flex: 1; padding: 0; }
+
+  .divider { height: 1px; background: var(--border); margin: 16px 20px; }
+
+  #status-badge {
+    margin: 0 20px 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  #status-badge .indicator {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  #status-badge.running .indicator {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  #status-badge.error .indicator { background: var(--accent); }
+
+  #action-btn {
+    margin: 0 20px;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .04em;
+  }
+  #action-btn.start {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,59,92,.3);
+  }
+  #action-btn.start:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,59,92,.45); }
+  #action-btn.stop { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  #action-btn.stop:hover { background: var(--border); }
+
+  #stats {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-card .val { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); }
+  .stat-card .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; font-family: var(--mono); }
+
+  /* ── Main panel ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  #tabs {
+    display: flex;
+    gap: 2px;
+    padding: 12px 20px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    letter-spacing: .05em;
+    transition: all .15s;
+    position: relative;
+    bottom: -1px;
+  }
+  .tab.active { color: var(--text); background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); }
+  .tab .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 4px;
+    font-size: 9px;
+    margin-left: 6px;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .panel { display: none; flex: 1; overflow: hidden; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* ── Log panel ── */
+  #log-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  #log-container::-webkit-scrollbar { width: 4px; }
+  #log-container::-webkit-scrollbar-track { background: transparent; }
+  #log-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-text.info    { color: var(--text); }
+  .log-text.warn    { color: var(--yellow); }
+  .log-text.error   { color: var(--accent); }
+  .log-text.success { color: var(--green); }
+
+  .empty-state {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .empty-state .icon { font-size: 36px; opacity: .3; }
+
+  /* ── Results / Chart panel ── */
+  #panel-results {
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #panel-results.active { display: flex; }
+
+  /* Legend bar */
+  #chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #chart-legend .leg-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-right: 4px;
+  }
+  .leg-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s;
+  }
+  .leg-item:hover { color: var(--text); }
+  .leg-item.hidden { opacity: .35; }
+  .leg-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .leg-count {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--muted);
+  }
+
+  /* Chart summary chips */
+  #chart-summary {
+    display: flex;
+    gap: 8px;
+    padding: 10px 20px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cs-chip {
+    flex: 1;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-align: center;
+    font-family: var(--mono);
+  }
+  .cs-chip .cs-val { font-size: 15px; font-weight: 700; }
+  .cs-chip .cs-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; margin-top:2px; }
+  .cs-chip.c-any      .cs-val { color: #7c8af7; }
+  .cs-chip.c-standard .cs-val { color: var(--green); }
+  .cs-chip.c-vip      .cs-val { color: var(--yellow); }
+  .cs-chip.c-resale   .cs-val { color: #ff6b8a; }
+
+  /* Chart canvas wrapper */
+  #chart-wrap {
+    flex: 1;
+    position: relative;
+    padding: 16px 20px;
+    min-height: 0;
+  }
+
+  /* empty chart state */
+  #chart-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    pointer-events: none;
+  }
+  #chart-empty .icon { font-size: 32px; opacity: .25; }
+
+  /* ── Alerts panel ── */
+  #alerts-container {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .alert-card {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--surface2);
+    border: 1px solid rgba(0,229,160,.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .alert-body .al-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .alert-body .al-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* Scan bar */
+  .scanning-bar {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    background-size: 200% 100%;
+    animation: scan 1.8s linear infinite;
+    display: none;
+  }
+  .scanning-bar.active { display: block; }
+  @keyframes scan { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div id="titlebar">
+  <div class="logo">
+    <div class="dot" id="logo-dot"></div>
+    TICKET<span style="color:var(--accent)">WATCH</span>
+  </div>
+  <div class="win-controls">
+    <button class="win-btn" onclick="window.api.minimize()">─</button>
+    <button class="win-btn close" onclick="window.api.close()">✕</button>
+  </div>
+</div>
+
+<div class="scanning-bar" id="scan-bar"></div>
+
+<div id="app">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="section-label">Monitor Config</div>
+
+    <div class="field">
+      <label>Ticketmaster URL</label>
+      <input type="url" id="inp-url" placeholder="https://www.ticketmaster.ca/event/..."/>
+    </div>
+
+    <div class="field">
+      <label>Your Email</label>
+      <input type="email" id="inp-email" placeholder="you@example.com"/>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Filters</div>
+
+    <div class="field-row" style="padding:0 20px;margin-bottom:14px;">
+      <div class="field">
+        <label>Min Price</label>
+        <input type="number" id="inp-min" placeholder="0" min="0"/>
+      </div>
+      <div class="field">
+        <label>Max Price</label>
+        <input type="number" id="inp-max" placeholder="∞" min="0"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Ticket Type</label>
+      <select id="inp-type">
+        <option value="any">Any</option>
+        <option value="Standard Admission">Standard</option>
+        <option value="VIP Package">VIP Package</option>
+        <option value="Verified Resale Ticket">Verified Resale</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Check Interval</label>
+      <select id="inp-interval">
+        <option value="60">Every 1 min</option>
+        <option value="120">Every 2 min</option>
+        <option value="300" selected>Every 5 min</option>
+        <option value="600">Every 10 min</option>
+        <option value="1800">Every 30 min</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="status-badge">
+      <div class="indicator"></div>
+      <span id="status-text">Idle — not watching</span>
+    </div>
+
+    <button id="action-btn" class="start" onclick="toggleWatch()">
+      ▶ &nbsp;Start Watching
+    </button>
+
+    <div id="stats">
+      <div class="stat-card">
+        <div class="val" id="stat-checks">0</div>
+        <div class="lbl">Checks</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-found">0</div>
+        <div class="lbl">Matches</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-emails">0</div>
+        <div class="lbl">Emails Sent</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-uptime">0m</div>
+        <div class="lbl">Uptime</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="tabs">
+      <div class="tab active" data-panel="logs"    onclick="switchTab(this)">LOGS</div>
+      <div class="tab"        data-panel="results" onclick="switchTab(this)">
+        RESULTS <span class="badge" id="badge-results" style="display:none">0</span>
+      </div>
+      <div class="tab"        data-panel="alerts"  onclick="switchTab(this)">
+        ALERTS <span class="badge" id="badge-alerts" style="display:none">0</span>
+      </div>
+    </div>
+
+    <!-- Logs panel -->
+    <div class="panel active" id="panel-logs">
+      <div id="log-container">
+        <div class="empty-state" id="log-empty">
+          <div class="icon">◎</div>
+          <div>No activity yet — configure and start watching</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results / Scatter Chart panel -->
+    <div class="panel" id="panel-results">
+
+      <!-- Legend -->
+      <div id="chart-legend">
+        <span class="leg-title">Type</span>
+        <div class="leg-item" id="leg-any"      onclick="toggleSeries('any')">
+          <div class="leg-dot" style="background:#7c8af7"></div>
+          <span>Any</span>
+          <span class="leg-count" id="cnt-any">0</span>
+        </div>
+        <div class="leg-item" id="leg-standard" onclick="toggleSeries('standard')">
+          <div class="leg-dot" style="background:#00e5a0"></div>
+          <span>Standard</span>
+          <span class="leg-count" id="cnt-standard">0</span>
+        </div>
+        <div class="leg-item" id="leg-vip"      onclick="toggleSeries('vip')">
+          <div class="leg-dot" style="background:#ffc947"></div>
+          <span>VIP Package</span>
+          <span class="leg-count" id="cnt-vip">0</span>
+        </div>
+        <div class="leg-item" id="leg-resale"   onclick="toggleSeries('resale')">
+          <div class="leg-dot" style="background:#ff6b8a"></div>
+          <span>Verified Resale</span>
+          <span class="leg-count" id="cnt-resale">0</span>
+        </div>
+      </div>
+
+      <!-- Summary chips -->
+      <div id="chart-summary">
+        <div class="cs-chip c-any">
+          <div class="cs-val" id="cs-any">—</div>
+          <div class="cs-lbl">Any total</div>
+        </div>
+        <div class="cs-chip c-standard">
+          <div class="cs-val" id="cs-standard">—</div>
+          <div class="cs-lbl">Std total</div>
+        </div>
+        <div class="cs-chip c-vip">
+          <div class="cs-val" id="cs-vip">—</div>
+          <div class="cs-lbl">VIP total</div>
+        </div>
+        <div class="cs-chip c-resale">
+          <div class="cs-val" id="cs-resale">—</div>
+          <div class="cs-lbl">Resale total</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div id="chart-wrap">
+        <div id="chart-empty">
+          <div class="icon">◈</div>
+          <div>No ticket data yet — start watching to populate chart</div>
+        </div>
+        <canvas id="scatter-chart"></canvas>
+      </div>
+
+    </div>
+
+    <!-- Alerts panel -->
+    <div class="panel" id="panel-alerts">
+      <div id="alerts-container">
+        <div class="empty-state" id="alerts-empty">
+          <div class="icon">◇</div>
+          <div>No alerts sent yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let watching = false;
+let checks = 0, found = 0, emails = 0;
+let startTime = null;
+let uptimeInterval = null;
+const MAX_LOGS = 300;
+
+// Cumulative counts per series, recorded at each check_done event
+// Each entry: { x: timestamp_ms, y: cumulative_count }
+const SERIES = {
+  any:      { label: 'Any',             color: '#7c8af7', count: 0, data: [] },
+  standard: { label: 'Standard',        color: '#00e5a0', count: 0, data: [] },
+  vip:      { label: 'VIP Package',     color: '#ffc947', count: 0, data: [] },
+  resale:   { label: 'Verified Resale', color: '#ff6b8a', count: 0, data: [] },
+};
+
+let lineChart = null;
+
+// ── Init chart ──────────────────────────────────────────────────────────────
+function initChart() {
+  const ctx = document.getElementById('scatter-chart').getContext('2d');
+
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: Object.entries(SERIES).map(([key, s]) => ({
+        label:            s.label,
+        data:             s.data,
+        borderColor:      s.color,
+        backgroundColor:  s.color + '22',
+        borderWidth:      2,
+        pointRadius:      4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: s.color,
+        tension:          0.35,
+        fill:             false,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0e0e1a',
+          borderColor: '#1e1e36',
+          borderWidth: 1,
+          titleColor: '#5a5a7a',
+          bodyColor: '#e8e8f0',
+          titleFont: { family: "'Space Mono', monospace", size: 10 },
+          bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+          callbacks: {
+            title: (items) => {
+              const d = new Date(items[0].parsed.x);
+              return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            },
+            label: (item) => ` ${item.dataset.label}  ${item.parsed.y} tickets`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          display: false,
+          ticks: {
+            color: '#5a5a7a',
+            font: { family: "'Space Mono', monospace", size: 10 },
+            maxTicksLimit: 8,
+            callback: (val) => new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          },
+          grid:   { color: '#1e1e3640' },
+          border: { color: '#1e1e36' },
+          title:  { display: true, text: 'TIME', color: '#5a5a7a', font: { family: "'Space Mono', monospace", size: 9 }, padding: { top: 6 } }
+        },
+        y: {
+          display: false,
+          beginAtZero: true,
+          ticks: {
+            color: '#5a5a7a',
+            font: { family: "'Space Mono', monospace", size: 10 },
+            stepSize: 1,
+            callback: (val) => Number.isInteger(val) ? val : ''
+          },
+          grid:   { color: '#1e1e3640' },
+          border: { color: '#1e1e36' },
+          title:  { display: true, text: 'TICKETS FOUND', color: '#5a5a7a', font: { family: "'Space Mono', monospace", size: 9 }, padding: { bottom: 6 } }
+        }
+      }
+    }
+  });
+}
+
+// ── Record a chart point from check_done breakdown ──────────────────────────
+function recordCheckPoint(breakdown) {
+  const ts = Date.now();
+
+  // breakdown: { standard, vip, resale, other } — all are counts for THIS check
+  // We accumulate into SERIES.count
+  SERIES.standard.count += breakdown.standard || 0;
+  SERIES.vip.count      += breakdown.vip      || 0;
+  SERIES.resale.count   += breakdown.resale   || 0;
+  // any = sum of all
+  SERIES.any.count = SERIES.standard.count + SERIES.vip.count
+                   + SERIES.resale.count + (breakdown.other || 0);
+
+  // Push a point for each series
+  Object.entries(SERIES).forEach(([key, s], i) => {
+    s.data.push({ x: ts, y: s.count });
+    if (lineChart) lineChart.data.datasets[i].data = s.data;
+  });
+
+  if (lineChart) {
+    lineChart.options.scales.x.display = true;
+    lineChart.options.scales.y.display = true;
+    lineChart.update('none');
+  }
+
+  document.getElementById('chart-empty').style.display = 'none';
+  updateCounts();
+}
+
+function updateCounts() {
+  Object.entries(SERIES).forEach(([key, s]) => {
+    document.getElementById('cnt-' + key).textContent = s.count;
+    const cs = document.getElementById('cs-' + key);
+    if (cs) cs.textContent = s.count > 0 ? s.count : '—';
+  });
+}
+
+// ── Toggle series visibility ─────────────────────────────────────────────────
+function toggleSeries(key) {
+  const idx = Object.keys(SERIES).indexOf(key);
+  if (!lineChart) return;
+  const ds = lineChart.data.datasets[idx];
+  ds.hidden = !ds.hidden;
+  document.getElementById('leg-' + key).classList.toggle('hidden', ds.hidden);
+  lineChart.update();
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + el.dataset.panel).classList.add('active');
+  // Resize chart when tab becomes visible
+  if (el.dataset.panel === 'results' && scatterChart) {
+    setTimeout(() => scatterChart.resize(), 50);
+  }
+}
+
+// ── Toggle watch ───────────────────────────────────────────────────────────
+function toggleWatch() {
+  if (!watching) {
+    const url      = document.getElementById('inp-url').value.trim();
+    const email    = document.getElementById('inp-email').value.trim();
+    const minPrice = document.getElementById('inp-min').value;
+    const maxPrice = document.getElementById('inp-max').value;
+    const tickType = document.getElementById('inp-type').value;
+    const interval = parseInt(document.getElementById('inp-interval').value);
+
+    if (!url)   { shakeField('inp-url');   return; }
+    if (!email) { shakeField('inp-email'); return; }
+
+    watching = true;
+    startTime = Date.now();
+    setWatchingUI(true);
+
+    window.api.startWatch({ url, email, minPrice, maxPrice, tickType, interval });
+    log(`Starting watcher for ${url}`, 'info');
+    log(`Alerts → ${email}  |  interval: ${interval}s`, 'info');
+
+    uptimeInterval = setInterval(updateUptime, 60000);
+  } else {
+    watching = false;
+    setWatchingUI(false);
+    window.api.stopWatch();
+    log('Watcher stopped.', 'warn');
+    clearInterval(uptimeInterval);
+  }
+}
+
+function setWatchingUI(on) {
+  const badge = document.getElementById('status-badge');
+  const btn   = document.getElementById('action-btn');
+  const bar   = document.getElementById('scan-bar');
+  badge.className = on ? 'running' : '';
+  document.getElementById('status-text').textContent = on ? 'Watching — active' : 'Idle — not watching';
+  btn.className  = on ? 'stop' : 'start';
+  btn.innerHTML  = on ? '■ &nbsp;Stop Watching' : '▶ &nbsp;Start Watching';
+  bar.className  = on ? 'scanning-bar active' : 'scanning-bar';
+}
+
+function shakeField(id) {
+  const el = document.getElementById(id);
+  el.style.borderColor = 'var(--accent)';
+  setTimeout(() => { el.style.borderColor = ''; }, 1500);
+}
+
+// ── Logging ────────────────────────────────────────────────────────────────
+function log(text, type = 'info') {
+  const container = document.getElementById('log-container');
+  document.getElementById('log-empty').style.display = 'none';
+  const t = new Date().toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-text ${type}">${escHtml(text)}</span>`;
+  container.appendChild(line);
+  const lines = container.querySelectorAll('.log-line');
+  if (lines.length > MAX_LOGS) lines[0].remove();
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+function addAlert(msg) {
+  emails++;
+  document.getElementById('stat-emails').textContent = emails;
+  const container = document.getElementById('alerts-container');
+  document.getElementById('alerts-empty').style.display = 'none';
+  const card = document.createElement('div');
+  card.className = 'alert-card';
+  card.innerHTML = `
+    <div class="alert-icon">✉</div>
+    <div class="alert-body">
+      <div class="al-title">Email alert sent</div>
+      <div class="al-meta">${escHtml(msg)} · ${new Date().toLocaleTimeString()}</div>
+    </div>`;
+  container.insertBefore(card, container.firstChild);
+  updateBadge('badge-alerts', emails);
+}
+
+// ── IPC messages from Python ───────────────────────────────────────────────
+window.api.onMessage((msg) => {
+  switch (msg.type) {
+    case 'log':
+      log(msg.text || '', msg.level || 'info');
+      break;
+    case 'check_done': {
+      checks++;
+      document.getElementById('stat-checks').textContent = checks;
+      const n = msg.count || 0;
+      if (msg.breakdown) recordCheckPoint(msg.breakdown);
+      log(`Check #${checks} — ${msg.total} seats total, ${n} new match(es)`, n > 0 ? 'success' : 'info');
+      break;
+    }
+    case 'ticket':
+      found++;
+      document.getElementById('stat-found').textContent = found;
+      updateBadge('badge-results', found);
+      log(`Match: ${msg.ticket.description} — $${msg.ticket.price}`, 'success');
+      break;
+    case 'email_sent':
+      addAlert(msg.to);
+      log(`Email alert sent to ${msg.to}`, 'success');
+      break;
+    case 'error':
+      log(`Error: ${msg.text}`, 'error');
+      break;
+    case 'stopped':
+      watching = false;
+      setWatchingUI(false);
+      log('Watcher process exited.', 'warn');
+      clearInterval(uptimeInterval);
+      break;
+  }
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateBadge(id, n) {
+  const el = document.getElementById(id);
+  el.textContent = n;
+  el.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
+function updateUptime() {
+  if (!startTime) return;
+  const mins = Math.floor((Date.now() - startTime) / 60000);
+  document.getElementById('stat-uptime').textContent = mins >= 60
+    ? `${Math.floor(mins/60)}h${mins%60}m`
+    : `${mins}m`;
+}
+
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+initChart();
+</script>
+</body>
+</html>

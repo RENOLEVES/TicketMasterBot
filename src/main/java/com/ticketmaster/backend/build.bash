@@ -1,1 +1,0 @@
-pyinstaller --onefile --name task --hidden-import seleniumwire --hidden-import undetected_chromedriver --hidden-import lxml --hidden-import bracex task.py

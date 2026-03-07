@@ -1,0 +1,30 @@
+pyinstaller ^
+  --onefile ^
+  --name watcher ^
+  --hidden-import mitmproxy ^
+  --hidden-import mitmproxy.addons ^
+  --hidden-import mitmproxy.tools.dump ^
+  --hidden-import mitmproxy.options ^
+  --hidden-import mitmproxy.proxy.layers.http ^
+  --hidden-import mitmproxy.net.http ^
+  --hidden-import undetected_chromedriver ^
+  --hidden-import selenium ^
+  --hidden-import selenium.webdriver ^
+  --hidden-import selenium.webdriver.common.by ^
+  --hidden-import selenium.webdriver.support.ui ^
+  --hidden-import selenium.webdriver.support.expected_conditions ^
+  --hidden-import lxml ^
+  --hidden-import lxml.html ^
+  --hidden-import lxml.etree ^
+  --hidden-import bracex ^
+  --hidden-import psutil ^
+  --hidden-import certifi ^
+  --hidden-import cryptography ^
+  --hidden-import OpenSSL ^
+  --hidden-import wsproto ^
+  --hidden-import h2 ^
+  --hidden-import h11 ^
+  --collect-all mitmproxy ^
+  --collect-all undetected_chromedriver ^
+  --collect-all certifi ^
+  task.py

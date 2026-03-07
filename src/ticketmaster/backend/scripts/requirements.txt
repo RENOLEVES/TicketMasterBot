@@ -1,0 +1,11 @@
+# TicketWatch Python dependencies
+# Install with: pip install -r requirements.txt
+
+undetected-chromedriver   # replaces seleniumwire's chromedriver
+selenium
+mitmproxy                 # replaces seleniumwire for traffic interception
+lxml
+bracex
+xvfbwrapper               # Linux only — safe to skip/ignore error on Windows
+pyinstaller               # only needed to build watcher.exe
+psutil
