@@ -93,7 +93,7 @@ class DebugAddon:
 # ── 从 task.py 导入核心函数 ───────────────────────────
 from task import (
     build_driver,
-    start_window_hider,
+    # start_window_hider,
     get_chrome_major_version,
     run_proxy,
     expand_custom,
@@ -292,4 +292,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        input("\n[ERROR] Press Enter to exit...")

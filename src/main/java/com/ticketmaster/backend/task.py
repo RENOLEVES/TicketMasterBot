@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 TicketWatch backend watcher
-Uses: undetected-chromedriver + mitmproxy
+Uses: undetected-chromedriver + mitmproxy (replaces abandoned seleniumwire)
 
-Usage: python task.py '<json_config>'
+Usage: python watcher.py '<json_config>'
 """
 
 import sys
@@ -19,9 +19,8 @@ from io import BytesIO
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# ── Inlined from utils.py (no external dependency) ──────────────────────────
 import bracex
-
-# ── Brace expansion ────────────────────────────────────────────────────────
 
 def _square_to_brace(s):
     stack = []
@@ -40,14 +39,13 @@ def expand_custom(s):
     return list(bracex.expand(converted))
 
 
-# ── SMTP Configuration ─────────────────────────────────────────────────────
+# ── SMTP Configuration ───────────────────────────────────────────────────────
 SMTP_HOST     = "smtp.gmail.com"
 SMTP_PORT     = 587
-SMTP_USER     = "cdpl4ter@gmail.com"
-SMTP_PASSWORD = "fwnb fqhs dxdz ovwm"
+SMTP_USER     = "cdpl4ter@gmail.com"       # <-- change
+SMTP_PASSWORD = "fwnb fqhs dxdz ovwm"     # <-- Gmail App Password
 
-# ── Stdout helpers ─────────────────────────────────────────────────────────
-
+# ── Stdout helpers ───────────────────────────────────────────────────────────
 def emit(obj: dict):
     print(json.dumps(obj, ensure_ascii=False), flush=True)
 
@@ -59,8 +57,7 @@ def die(msg: str):
     sys.exit(1)
 
 
-# ── Mitmproxy addon ────────────────────────────────────────────────────────
-
+# ── Mitmproxy addon ──────────────────────────────────────────────────────────
 class TicketmasterAddon:
     def __init__(self, data_queue: queue.Queue):
         self.q = data_queue
@@ -78,12 +75,14 @@ class TicketmasterAddon:
         )
         if not (is_facets or is_offer):
             return
+        # Skip CORS preflight and other non-GET requests
         if flow.request.method != "GET":
             return
         try:
             body = flow.response.content
             if not body:
                 return
+            # Skip non-JSON responses (preflight replies, plain text, etc.)
             stripped = body.lstrip()
             if not stripped.startswith(b"{") and not stripped.startswith(b"["):
                 return
@@ -94,7 +93,7 @@ class TicketmasterAddon:
                         body = f.read()
                     stripped = body.lstrip()
                 except Exception:
-                    pass
+                    pass  # not actually gzipped, use raw body
             text = stripped.decode("utf-8").strip()
             if not text:
                 return
@@ -118,9 +117,9 @@ def run_proxy(port: int, addon: TicketmasterAddon):
     asyncio.run(_run())
 
 
-# ── Chrome version detection ───────────────────────────────────────────────
-
+# ── Chrome driver ────────────────────────────────────────────────────────────
 def get_chrome_major_version() -> int:
+    """Auto-detect installed Chrome version to avoid driver mismatch."""
     import subprocess, re
     paths = [
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -134,104 +133,8 @@ def get_chrome_major_version() -> int:
                 return int(m.group(1))
         except Exception:
             pass
-    return 145
+    return 145  # fallback
 
-# 别名供 task_debug.py 使用
-get_chrome_major = get_chrome_major_version
-
-
-# ── Pre-hider: suppress blank patch window ────────────────────────────────
-
-def _start_prehider():
-    if sys.platform != "win32":
-        return lambda: None
-
-    import ctypes
-    import ctypes.wintypes
-
-    _running = threading.Event()
-    _running.set()
-    user32 = ctypes.windll.user32
-    EnumWindowsProc = ctypes.WINFUNCTYPE(
-        ctypes.c_bool,
-        ctypes.wintypes.HWND,
-        ctypes.wintypes.LPARAM,
-    )
-
-    def cb(hwnd, _):
-        cls_buf = ctypes.create_unicode_buffer(256)
-        user32.GetClassNameW(hwnd, cls_buf, 256)
-        if "Chrome" in cls_buf.value and user32.IsWindowVisible(hwnd):
-            user32.ShowWindow(hwnd, 0)
-        return True
-
-    def loop():
-        while _running.is_set():
-            user32.EnumWindows(EnumWindowsProc(cb), 0)
-            time.sleep(0.05)
-
-    threading.Thread(target=loop, daemon=True).start()
-
-    def stop():
-        _running.clear()
-
-    return stop
-
-
-# ── Persistent window hider ───────────────────────────────────────────────
-
-def start_window_hider(chrome_pid: int):
-    if sys.platform != "win32":
-        return
-    import ctypes
-    import ctypes.wintypes
-    import subprocess as _sp
-
-    user32 = ctypes.windll.user32
-    EnumWindowsProc = ctypes.WINFUNCTYPE(
-        ctypes.c_bool,
-        ctypes.wintypes.HWND,
-        ctypes.wintypes.LPARAM,
-    )
-
-    def get_tree(pid):
-        pids = {pid}
-        try:
-            out = _sp.check_output(
-                ["wmic", "process", "where",
-                 f"ParentProcessId={pid}", "get", "ProcessId"],
-                stderr=_sp.DEVNULL
-            ).decode()
-            for line in out.splitlines():
-                line = line.strip()
-                if line.isdigit():
-                    pids |= get_tree(int(line))
-        except Exception:
-            pass
-        return pids
-
-    def hider():
-        while True:
-            try:
-                pids = get_tree(chrome_pid)
-                def cb(hwnd, _):
-                    pid = ctypes.wintypes.DWORD()
-                    user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-                    if pid.value in pids and user32.IsWindowVisible(hwnd):
-                        user32.ShowWindow(hwnd, 0)
-                    return True
-                user32.EnumWindows(EnumWindowsProc(cb), 0)
-            except Exception:
-                pass
-            time.sleep(0.5)
-
-    threading.Thread(target=hider, daemon=True).start()
-
-# 别名供 task_debug.py 使用
-_start_window_hider = start_window_hider
-
-
-# ── Chrome driver ──────────────────────────────────────────────────────────
 
 def build_driver(proxy_port: int):
     try:
@@ -243,19 +146,26 @@ def build_driver(proxy_port: int):
     log(f"Detected Chrome version: {chrome_ver}")
 
     options = uc.ChromeOptions()
+    options.add_argument("--headless=new")
 
+    # ── 防止空白 Chrome 窗口出现 ──────────────────────────────────────────
     options.add_argument("--no-first-run")
     options.add_argument("--no-default-browser-check")
     options.add_argument("--no-service-autorun")
     options.add_argument("--password-store=basic")
     options.add_argument("--disable-features=ChromeWhatsNewUI")
-    options.add_argument("--disable-backgrounding-occluded-windows")
+
+    # ── Background mode (屏幕外运行，不显示窗口) ──────────────────────────
     options.add_argument("--window-position=-32000,-32000")
     options.add_argument("--window-size=1280,900")
+
+    # Anti-detection flags
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+
+    # Real user agent
     options.add_argument(
         f"user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         f"AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -264,52 +174,34 @@ def build_driver(proxy_port: int):
     options.add_argument(f"--proxy-server=http://127.0.0.1:{proxy_port}")
     options.add_argument("--ignore-certificate-errors")
     options.add_argument("--allow-insecure-localhost")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-background-networking")
-    options.add_argument("--disable-sync")
-    options.add_argument("--metrics-recording-only")
-    options.add_argument("--disable-default-apps")
-    options.add_argument("--mute-audio")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--blink-settings=imagesEnabled=false")
 
-    stop_prehider = _start_prehider()
-
+    # ── suppress_welcome=True 是关闭空白窗口的核心参数 ────────────────────
     driver = uc.Chrome(
         options=options,
         version_main=chrome_ver,
         suppress_welcome=True,
+        use_subprocess=True
     )
-
-    stop_prehider()
-
-    if sys.platform == "win32":
-        try:
-            chrome_pid = driver.browser_pid
-            if chrome_pid:
-                start_window_hider(chrome_pid)
-                log(f"Window hider started for Chrome PID {chrome_pid}")
-        except Exception as e:
-            log(f"Window hider could not start: {e}", "warn")
 
     return driver
 
-
-# ── Scrape ─────────────────────────────────────────────────────────────────
-
+# ── Scrape ───────────────────────────────────────────────────────────────────
 def scrape(driver, url: str, data_queue: queue.Queue) -> list:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
 
+    # Drain stale data
     while not data_queue.empty():
-        try: data_queue.get_nowait()
-        except queue.Empty: break
+        try:
+            data_queue.get_nowait()
+        except queue.Empty:
+            break
 
     driver.get(url)
     driver.execute_script("document.body.style.zoom='50%'")
 
+    # Accept modal
     btn_locs = [
         (By.XPATH, '//button[.//span[normalize-space(text())="Accept & Continue"]]'),
         (By.XPATH, '//button[@data-bdd="accept-modal-accept-button"]'),
@@ -339,14 +231,17 @@ def scrape(driver, url: str, data_queue: queue.Queue) -> list:
 
     time.sleep(8)
 
+    # Collect proxy data
     facets_data = offer_data = None
     deadline = time.time() + 5
     while time.time() < deadline:
         while not data_queue.empty():
             try:
                 key, data = data_queue.get_nowait()
-                if key == "facets": facets_data = data
-                else:               offer_data  = data
+                if key == "facets":
+                    facets_data = data
+                else:
+                    offer_data = data
             except queue.Empty:
                 break
         if facets_data and offer_data:
@@ -362,14 +257,16 @@ def scrape(driver, url: str, data_queue: queue.Queue) -> list:
         )
         return []
 
+    # Price map
     try:
-        offer_list = offer_data["_embedded"]["offer"]
+        offers = offer_data["_embedded"]["offer"]
     except (KeyError, TypeError):
         log("Unexpected offer JSON structure", "warn")
         return []
 
-    price_map = {o["offerId"]: o.get("totalPrice") for o in offer_list if o.get("offerId")}
+    price_map = {o["offerId"]: o.get("totalPrice") for o in offers if o.get("offerId")}
 
+    # Place → offerId map
     place_to_offer = {}
     for facet in facets_data.get("facets", []):
         oids = facet.get("offers", [])
@@ -378,8 +275,9 @@ def scrape(driver, url: str, data_queue: queue.Queue) -> list:
             for pid in expand_custom(raw):
                 place_to_offer[pid] = oid
 
+    # Parse SVG
     from lxml import html as lxhtml
-    tree = lxhtml.fromstring(driver.page_source)
+    tree    = lxhtml.fromstring(driver.page_source)
     tickets = []
 
     for block in tree.xpath('//*[local-name()="g" and @data-component="svg__block"]'):
@@ -390,10 +288,10 @@ def scrape(driver, url: str, data_queue: queue.Queue) -> list:
                 './/*[(local-name()="circle" or local-name()="g") and @data-component="svg__seat"]'
             ):
                 cls = seat.get("class", "")
-                if   "is-resale"    in cls: branding = "Verified Resale Ticket"
-                elif "is-locked"    in cls: branding = "Standard Admission/Unlock"
-                elif "is-vip-star"  in cls: branding = "VIP Package"
-                elif "is-ada"       in cls: branding = "Standard Admission/Wheelchair Accessible"
+                if   "is-resale"   in cls: branding = "Verified Resale Ticket"
+                elif "is-locked"   in cls: branding = "Standard Admission/Unlock"
+                elif "is-vip-star" in cls: branding = "VIP Package"
+                elif "is-ada"      in cls: branding = "Standard Admission/Wheelchair Accessible"
                 elif "is-available" in cls: branding = "Standard Admission"
                 else: continue
 
@@ -407,11 +305,11 @@ def scrape(driver, url: str, data_queue: queue.Queue) -> list:
                     "price":    price_map.get(oid) if oid else None,
                     "offerId":  oid,
                 })
+
     return tickets
 
 
-# ── Filter ─────────────────────────────────────────────────────────────────
-
+# ── Filter ───────────────────────────────────────────────────────────────────
 def apply_filters(tickets, config):
     min_p  = float(config.get("minPrice") or 0)
     max_p  = float(config.get("maxPrice") or 1e9)
@@ -421,15 +319,17 @@ def apply_filters(tickets, config):
         p = t.get("price")
         if p is not None:
             try:
-                if float(p) < min_p or float(p) > max_p: continue
-            except (ValueError, TypeError): pass
-        if t_type != "any" and t.get("branding") != t_type: continue
+                if float(p) < min_p or float(p) > max_p:
+                    continue
+            except (ValueError, TypeError):
+                pass
+        if t_type != "any" and t.get("branding") != t_type:
+            continue
         out.append(t)
     return out
 
 
-# ── Email ──────────────────────────────────────────────────────────────────
-
+# ── Email ────────────────────────────────────────────────────────────────────
 def send_email(to, tickets, url):
     try:
         msg = MIMEMultipart("alternative")
@@ -472,9 +372,9 @@ def send_email(to, tickets, url):
         log(f"Email failed: {e}", "error")
 
 
-# ── Main ───────────────────────────────────────────────────────────────────
-
+# ── Main ─────────────────────────────────────────────────────────────────────
 def main():
+    # ── Windows: hide console window & suppress taskbar flash ────────────
     if sys.platform == "win32":
         import ctypes
         ctypes.windll.user32.ShowWindow(
@@ -511,8 +411,10 @@ def main():
 
     def shutdown(sig, frame):
         log("Shutting down…", "warn")
-        try: driver.quit()
-        except Exception: pass
+        try:
+            driver.quit()
+        except Exception:
+            pass
         sys.exit(0)
 
     signal.signal(signal.SIGINT,  shutdown)
