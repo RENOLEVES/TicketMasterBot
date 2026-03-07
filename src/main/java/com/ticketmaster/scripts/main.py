@@ -113,3 +113,9 @@ def fetch_data(url):
     print("data written")
 
     driver.quit()
+
+
+SMTP_HOST     = "smtp.gmail.com"
+SMTP_PORT     = 587
+SMTP_USER     = "cdpl4ter@gmail.com"   # <-- change
+SMTP_PASSWORD = "fwnb fqhs dxdz ovwm"       # <-- Gmail App Password

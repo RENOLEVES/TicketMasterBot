@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>TicketWatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Variables ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #07070d;
+    --surface:   #0e0e1a;
+    --surface2:  #141424;
+    --border:    #1e1e36;
+    --accent:    #ff3b5c;
+    --accent2:   #7c3aed;
+    --green:     #00e5a0;
+    --yellow:    #ffc947;
+    --text:      #e8e8f0;
+    --muted:     #5a5a7a;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Titlebar ── */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  #titlebar .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--sans); font-weight: 800; font-size: 15px;
+    letter-spacing: 0.05em;
+  }
+  #titlebar .logo .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(0.8)} }
+
+  #titlebar .win-controls {
+    display: flex; gap: 8px;
+    -webkit-app-region: no-drag;
+  }
+  .win-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .win-btn:hover { background: var(--border); color: var(--text); }
+  .win-btn.close:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Layout ── */
+  #app {
+    display: flex;
+    height: calc(100vh - 44px);
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0 20px;
+    margin-bottom: 10px;
+  }
+
+  /* Form elements */
+  .field { padding: 0 20px; margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: .08em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+  }
+  .field input::placeholder { color: var(--muted); }
+  .field select option { background: var(--surface2); }
+
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field { flex: 1; padding: 0; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 20px;
+  }
+
+  /* Status badge */
+  #status-badge {
+    margin: 0 20px 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  #status-badge .indicator {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  #status-badge.running .indicator {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  #status-badge.error .indicator { background: var(--accent); }
+
+  /* Action button */
+  #action-btn {
+    margin: 0 20px;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .04em;
+  }
+  #action-btn.start {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,59,92,.3);
+  }
+  #action-btn.start:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(255,59,92,.45);
+  }
+  #action-btn.stop {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  #action-btn.stop:hover { background: var(--border); }
+
+  /* Stats */
+  #stats {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-card .val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-card .lbl {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  /* ── Main panel ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  #tabs {
+    display: flex;
+    gap: 2px;
+    padding: 12px 20px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    letter-spacing: .05em;
+    transition: all .15s;
+    position: relative;
+    bottom: -1px;
+  }
+  .tab.active {
+    color: var(--text);
+    background: var(--bg);
+    border-color: var(--border);
+    border-bottom-color: var(--bg);
+  }
+  .tab .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 4px;
+    font-size: 9px;
+    margin-left: 6px;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* Panel content */
+  .panel { display: none; flex: 1; overflow: hidden; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* Log panel */
+  #log-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  #log-container::-webkit-scrollbar { width: 4px; }
+  #log-container::-webkit-scrollbar-track { background: transparent; }
+  #log-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-text.info  { color: var(--text); }
+  .log-text.warn  { color: var(--yellow); }
+  .log-text.error { color: var(--accent); }
+  .log-text.success { color: var(--green); }
+
+  .empty-state {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .empty-state .icon { font-size: 36px; opacity: .3; }
+
+  /* Results panel */
+  #results-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #results-container::-webkit-scrollbar { width: 4px; }
+  #results-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .result-card.match {
+    border-color: rgba(0,229,160,.3);
+    background: rgba(0,229,160,.05);
+  }
+  .result-card .rc-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .result-card .rc-name {
+    font-weight: 600; font-size: 14px;
+  }
+  .result-card .rc-price {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--green);
+    font-weight: 700;
+  }
+  .result-card .rc-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .tag {
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .05em;
+    border: 1px solid;
+  }
+  .tag.type-vip     { color: #ffc947; border-color: rgba(255,201,71,.3); background: rgba(255,201,71,.08); }
+  .tag.type-std     { color: #7c8af7; border-color: rgba(124,138,247,.3); background: rgba(124,138,247,.08); }
+  .tag.type-resale  { color: #ff6b8a; border-color: rgba(255,107,138,.3); background: rgba(255,107,138,.08); }
+  .tag.type-default { color: var(--muted); border-color: var(--border); }
+
+  /* Alerts panel */
+  #alerts-container {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .alert-card {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--surface2);
+    border: 1px solid rgba(0,229,160,.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    animation: slideIn .25s ease;
+  }
+  .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .alert-body .al-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .alert-body .al-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* Scan animation */
+  .scanning-bar {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    background-size: 200% 100%;
+    animation: scan 1.8s linear infinite;
+    display: none;
+  }
+  .scanning-bar.active { display: block; }
+  @keyframes scan { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* ── Status Dashboard ── */
+  #status-dashboard {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .pipe-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+    position: relative;
+  }
+  .pipe-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: calc(50% + 14px);
+    right: calc(-50% + 14px);
+    height: 1px;
+    background: var(--border);
+    transition: background .3s;
+  }
+  .pipe-step.done:not(:last-child)::after { background: var(--green); }
+  .pipe-step.active:not(:last-child)::after { background: var(--border); }
+
+  .pipe-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all .3s;
+    position: relative;
+    z-index: 1;
+  }
+  .pipe-step.active .pipe-icon {
+    border-color: var(--yellow);
+    color: var(--yellow);
+    box-shadow: 0 0 8px rgba(255,201,71,.3);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .pipe-step.done .pipe-icon {
+    border-color: var(--green);
+    background: rgba(0,229,160,.1);
+    color: var(--green);
+    box-shadow: 0 0 6px rgba(0,229,160,.2);
+  }
+  .pipe-step.error .pipe-icon {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(255,59,92,.3);
+  }
+  .pipe-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    text-align: center;
+  }
+  .pipe-step.active .pipe-label { color: var(--yellow); }
+  .pipe-step.done  .pipe-label  { color: var(--green); }
+  .pipe-step.error .pipe-label  { color: var(--accent); }
+
+  /* Live status line */
+  #live-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-height: 32px;
+    transition: all .2s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #live-status.active { color: var(--text); border-color: var(--border); }
+  #live-status.success { color: var(--green); border-color: rgba(0,229,160,.3); }
+  #live-status.error   { color: var(--accent); border-color: rgba(255,59,92,.3); }
+
+  /* Last check summary */
+  #last-check {
+    display: flex; gap: 8px;
+  }
+  .lc-chip {
+    flex: 1;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-align: center;
+    font-family: var(--mono);
+  }
+  .lc-chip .lc-val { font-size: 16px; font-weight: 700; }
+  .lc-chip .lc-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing:.06em; margin-top:2px; }
+  .lc-chip.highlight .lc-val { color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div id="titlebar">
+  <div class="logo">
+    <div class="dot" id="logo-dot"></div>
+    TICKET<span style="color:var(--accent)">WATCH</span>
+  </div>
+  <div class="win-controls">
+    <button class="win-btn" onclick="window.api.minimize()">─</button>
+    <button class="win-btn close" onclick="window.api.close()">✕</button>
+  </div>
+</div>
+
+<!-- Scanning bar -->
+<div class="scanning-bar" id="scan-bar"></div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="section-label">Monitor Config</div>
+
+    <div class="field">
+      <label>Ticketmaster URL</label>
+      <input type="url" id="inp-url" placeholder="https://www.ticketmaster.ca/event/..."/>
+    </div>
+
+    <div class="field">
+      <label>Your Email</label>
+      <input type="email" id="inp-email" placeholder="you@example.com"/>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Filters</div>
+
+    <div class="field-row" style="padding:0 20px;margin-bottom:14px;">
+      <div class="field">
+        <label>Min Price</label>
+        <input type="number" id="inp-min" placeholder="0" min="0"/>
+      </div>
+      <div class="field">
+        <label>Max Price</label>
+        <input type="number" id="inp-max" placeholder="∞" min="0"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Ticket Type</label>
+      <select id="inp-type">
+        <option value="any">Any</option>
+        <option value="Standard Admission">Standard</option>
+        <option value="VIP Package">VIP Package</option>
+        <option value="Verified Resale Ticket">Verified Resale</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Check Interval</label>
+      <select id="inp-interval">
+        <option value="60">Every 1 min</option>
+        <option value="120">Every 2 min</option>
+        <option value="300" selected>Every 5 min</option>
+        <option value="600">Every 10 min</option>
+        <option value="1800">Every 30 min</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Status -->
+    <div id="status-badge">
+      <div class="indicator"></div>
+      <span id="status-text">Idle — not watching</span>
+    </div>
+
+    <button id="action-btn" class="start" onclick="toggleWatch()">
+      ▶ &nbsp;Start Watching
+    </button>
+
+    <!-- Stats -->
+    <div id="stats">
+      <div class="stat-card">
+        <div class="val" id="stat-checks">0</div>
+        <div class="lbl">Checks</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-found">0</div>
+        <div class="lbl">Matches</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-emails">0</div>
+        <div class="lbl">Emails Sent</div>
+      </div>
+      <div class="stat-card">
+        <div class="val" id="stat-uptime">0m</div>
+        <div class="lbl">Uptime</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="tabs">
+      <div class="tab active" data-panel="logs" onclick="switchTab(this)">LOGS</div>
+      <div class="tab" data-panel="results" onclick="switchTab(this)">
+        RESULTS <span class="badge" id="badge-results" style="display:none">0</span>
+      </div>
+      <div class="tab" data-panel="alerts" onclick="switchTab(this)">
+        ALERTS <span class="badge" id="badge-alerts" style="display:none">0</span>
+      </div>
+    </div>
+
+    <!-- Logs panel -->
+    <div class="panel active" id="panel-logs">
+      <div id="log-container">
+        <div class="empty-state" id="log-empty">
+          <div class="icon">◎</div>
+          <div>No activity yet — configure and start watching</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results panel -->
+    <div class="panel" id="panel-results">
+
+      <!-- Status Dashboard -->
+      <div id="status-dashboard">
+        <!-- Pipeline steps -->
+        <div class="pipeline">
+          <div class="pipe-step" id="step-proxy">
+            <div class="pipe-icon">⬡</div>
+            <div class="pipe-label">Proxy</div>
+          </div>
+          <div class="pipe-step" id="step-chrome">
+            <div class="pipe-icon">◉</div>
+            <div class="pipe-label">Chrome</div>
+          </div>
+          <div class="pipe-step" id="step-page">
+            <div class="pipe-icon">⬢</div>
+            <div class="pipe-label">Page</div>
+          </div>
+          <div class="pipe-step" id="step-api">
+            <div class="pipe-icon">◈</div>
+            <div class="pipe-label">API</div>
+          </div>
+          <div class="pipe-step" id="step-parse">
+            <div class="pipe-icon">◎</div>
+            <div class="pipe-label">Parse</div>
+          </div>
+          <div class="pipe-step" id="step-done">
+            <div class="pipe-icon">✓</div>
+            <div class="pipe-label">Done</div>
+          </div>
+        </div>
+
+        <!-- Live status text -->
+        <div id="live-status">Waiting to start…</div>
+
+        <!-- Last check chips -->
+        <div id="last-check">
+          <div class="lc-chip">
+            <div class="lc-val" id="lc-total">—</div>
+            <div class="lc-lbl">Total Seats</div>
+          </div>
+          <div class="lc-chip highlight">
+            <div class="lc-val" id="lc-matches">—</div>
+            <div class="lc-lbl">Matches</div>
+          </div>
+          <div class="lc-chip">
+            <div class="lc-val" id="lc-time">—</div>
+            <div class="lc-lbl">Last Check</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticket cards -->
+      <div id="results-container" style="flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:10px;">
+        <div class="empty-state" id="results-empty">
+          <div class="icon">◈</div>
+          <div>No matching tickets yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts panel -->
+    <div class="panel" id="panel-alerts">
+      <div id="alerts-container">
+        <div class="empty-state" id="alerts-empty">
+          <div class="icon">◇</div>
+          <div>No alerts sent yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let watching = false;
+let checks = 0, found = 0, emails = 0;
+let startTime = null;
+let uptimeInterval = null;
+const MAX_LOGS = 300;
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + el.dataset.panel).classList.add('active');
+}
+
+// ── Toggle watch ───────────────────────────────────────────────────────────
+function toggleWatch() {
+  if (!watching) {
+    const url      = document.getElementById('inp-url').value.trim();
+    const email    = document.getElementById('inp-email').value.trim();
+    const minPrice = document.getElementById('inp-min').value;
+    const maxPrice = document.getElementById('inp-max').value;
+    const tickType = document.getElementById('inp-type').value;
+    const interval = parseInt(document.getElementById('inp-interval').value);
+
+    if (!url)   { shakeField('inp-url');   return; }
+    if (!email) { shakeField('inp-email'); return; }
+
+    watching = true;
+    startTime = Date.now();
+    setWatchingUI(true);
+
+    window.api.startWatch({ url, email, minPrice, maxPrice, tickType, interval });
+    log(`Starting watcher for ${url}`, 'info');
+    log(`Alerts → ${email}  |  interval: ${interval}s`, 'info');
+    resetPipeline();
+    setStep('proxy', 'active');
+    setLiveStatus('Starting proxy…', 'active');
+
+    uptimeInterval = setInterval(updateUptime, 60000);
+
+  } else {
+    watching = false;
+    setWatchingUI(false);
+    window.api.stopWatch();
+    log('Watcher stopped.', 'warn');
+    clearInterval(uptimeInterval);
+  }
+}
+
+function setWatchingUI(on) {
+  const badge = document.getElementById('status-badge');
+  const btn   = document.getElementById('action-btn');
+  const bar   = document.getElementById('scan-bar');
+
+  badge.className = on ? 'running' : '';
+  document.getElementById('status-text').textContent = on ? 'Watching — active' : 'Idle — not watching';
+  btn.className   = on ? 'stop' : 'start';
+  btn.innerHTML   = on ? '■ &nbsp;Stop Watching' : '▶ &nbsp;Start Watching';
+  bar.className   = on ? 'scanning-bar active' : 'scanning-bar';
+}
+
+function shakeField(id) {
+  const el = document.getElementById(id);
+  el.style.borderColor = 'var(--accent)';
+  el.style.animation = 'none';
+  setTimeout(() => { el.style.borderColor = ''; }, 1500);
+}
+
+// ── Logging ────────────────────────────────────────────────────────────────
+function log(text, type = 'info') {
+  const container = document.getElementById('log-container');
+  document.getElementById('log-empty').style.display = 'none';
+
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8);
+
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-text ${type}">${escHtml(text)}</span>`;
+  container.appendChild(line);
+
+  // Trim old lines
+  const lines = container.querySelectorAll('.log-line');
+  if (lines.length > MAX_LOGS) lines[0].remove();
+
+  container.scrollTop = container.scrollHeight;
+}
+
+// ── Results ────────────────────────────────────────────────────────────────
+function addResult(ticket) {
+  found++;
+  document.getElementById('stat-found').textContent = found;
+
+  const container = document.getElementById('results-container');
+  document.getElementById('results-empty').style.display = 'none';
+
+  const tagClass = ticket.branding?.includes('VIP') ? 'type-vip'
+    : ticket.branding?.includes('Resale') ? 'type-resale'
+    : ticket.branding?.includes('Standard') ? 'type-std'
+    : 'type-default';
+
+  const price = ticket.price ? `$${parseFloat(ticket.price).toFixed(2)}` : 'N/A';
+
+  const card = document.createElement('div');
+  card.className = 'result-card match';
+  card.innerHTML = `
+    <div class="rc-header">
+      <div class="rc-name">${escHtml(ticket.description || 'Ticket')}</div>
+      <div class="rc-price">${price}</div>
+    </div>
+    <div class="rc-meta">
+      <span class="tag ${tagClass}">${escHtml(ticket.branding || 'Unknown')}</span>
+      ${ticket.section ? `<span class="tag type-default">SEC ${escHtml(ticket.section)}</span>` : ''}
+      ${ticket.row    ? `<span class="tag type-default">ROW ${escHtml(ticket.row)}</span>`     : ''}
+    </div>`;
+  container.insertBefore(card, container.firstChild);
+
+  updateBadge('badge-results', found);
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+function addAlert(msg) {
+  emails++;
+  document.getElementById('stat-emails').textContent = emails;
+
+  const container = document.getElementById('alerts-container');
+  document.getElementById('alerts-empty').style.display = 'none';
+
+  const card = document.createElement('div');
+  card.className = 'alert-card';
+  card.innerHTML = `
+    <div class="alert-icon">✉</div>
+    <div class="alert-body">
+      <div class="al-title">Email alert sent</div>
+      <div class="al-meta">${escHtml(msg)} · ${new Date().toLocaleTimeString()}</div>
+    </div>`;
+  container.insertBefore(card, container.firstChild);
+
+  updateBadge('badge-alerts', emails);
+}
+
+// ── Pipeline step control ──────────────────────────────────────────────────
+const STEPS = ['proxy','chrome','page','api','parse','done'];
+
+function resetPipeline() {
+  STEPS.forEach(s => {
+    const el = document.getElementById('step-' + s);
+    if (el) el.className = 'pipe-step';
+  });
+  setLiveStatus('Waiting to start…', '');
+  document.getElementById('lc-total').textContent   = '—';
+  document.getElementById('lc-matches').textContent = '—';
+  document.getElementById('lc-time').textContent    = '—';
+}
+
+function setStep(name, state) {  // state: 'active' | 'done' | 'error'
+  // Mark all previous steps done when advancing
+  if (state === 'active') {
+    const idx = STEPS.indexOf(name);
+    STEPS.slice(0, idx).forEach(s => {
+      const el = document.getElementById('step-' + s);
+      if (el && !el.classList.contains('error')) el.className = 'pipe-step done';
+    });
+  }
+  const el = document.getElementById('step-' + name);
+  if (el) el.className = 'pipe-step ' + state;
+}
+
+function setLiveStatus(text, type = '') {
+  const el = document.getElementById('live-status');
+  el.textContent = text;
+  el.className   = type ? type : 'active';
+}
+
+// Map log messages → pipeline steps
+function inferStep(text) {
+  const t = text.toLowerCase();
+  if (t.includes('proxy listening'))                      return ['proxy',  'done'];
+  if (t.includes('initializing chrome') ||
+      t.includes('detected chrome'))                      return ['chrome', 'active'];
+  if (t.includes('checking:'))                            return ['page',   'active'];
+  if (t.includes('offer cards') ||
+      t.includes('zoom clicked') ||
+      t.includes('waiting'))                              return ['api',    'active'];
+  if (t.includes('api capture') && t.includes('missing')) return ['api',    'error'];
+  if (t.includes('facets') || t.includes('offer') ||
+      t.includes('proxy decoded'))                        return ['api',    'done'];
+  if (t.includes('svg blocks') || t.includes('price map')) return ['parse', 'active'];
+  if (t.includes('next check in'))                        return ['done',   'done'];
+  return null;
+}
+
+// ── IPC messages from Python ───────────────────────────────────────────────
+window.api.onMessage((msg) => {
+  switch (msg.type) {
+    case 'log': {
+      const text  = msg.text || '';
+      const level = msg.level || 'info';
+      log(text, level);
+
+      // Update live status bar
+      setLiveStatus(text, level === 'error' ? 'error' : level === 'success' ? 'success' : 'active');
+
+      // Advance pipeline
+      const step = inferStep(text);
+      if (step) setStep(step[0], step[1]);
+
+      // Chrome init — mark chrome done when "Detected Chrome version"
+      if (text.toLowerCase().includes('detected chrome')) setStep('chrome', 'done');
+      break;
+    }
+    case 'check_done': {
+      checks++;
+      document.getElementById('stat-checks').textContent = checks;
+      const n = msg.count || 0;
+      log(`Check #${checks} — ${msg.total} seats total, ${n} new match(es)`, n > 0 ? 'success' : 'info');
+      setStep('done', 'done');
+      setLiveStatus(`Check #${checks} complete — ${n} new match(es)`, n > 0 ? 'success' : 'active');
+      document.getElementById('lc-total').textContent   = msg.total || 0;
+      document.getElementById('lc-matches').textContent = n;
+      document.getElementById('lc-time').textContent    = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      // Reset pipeline for next cycle after a moment
+      setTimeout(() => {
+        STEPS.forEach(s => {
+          const el = document.getElementById('step-' + s);
+          if (el && el.classList.contains('done')) el.className = 'pipe-step';
+        });
+      }, 3000);
+      break;
+    }
+    case 'ticket':
+      addResult(msg.ticket);
+      log(`Match: ${msg.ticket.description} — $${msg.ticket.price}`, 'success');
+      break;
+    case 'email_sent':
+      addAlert(msg.to);
+      log(`Email alert sent to ${msg.to}`, 'success');
+      break;
+    case 'error':
+      log(`Error: ${msg.text}`, 'error');
+      setLiveStatus(msg.text || 'Unknown error', 'error');
+      // Mark current active step as error
+      STEPS.forEach(s => {
+        const el = document.getElementById('step-' + s);
+        if (el && el.classList.contains('active')) el.className = 'pipe-step error';
+      });
+      break;
+    case 'stopped':
+      watching = false;
+      setWatchingUI(false);
+      log('Watcher process exited.', 'warn');
+      setLiveStatus('Stopped', '');
+      resetPipeline();
+      clearInterval(uptimeInterval);
+      break;
+  }
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateBadge(id, n) {
+  const el = document.getElementById(id);
+  el.textContent = n;
+  el.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
+function updateUptime() {
+  if (!startTime) return;
+  const mins = Math.floor((Date.now() - startTime) / 60000);
+  document.getElementById('stat-uptime').textContent = mins >= 60
+    ? `${Math.floor(mins/60)}h${mins%60}m`
+    : `${mins}m`;
+}
+
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

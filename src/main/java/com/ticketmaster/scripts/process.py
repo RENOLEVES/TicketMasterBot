@@ -1,7 +1,7 @@
 import datetime
 import os.path
 from lxml import html
-from utils import expand_custom
+from ticketmaster.backend.scripts.utils import expand_custom
 import pandas as pd
 import json
 
