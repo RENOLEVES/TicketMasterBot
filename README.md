@@ -1,4 +1,4 @@
-# 🎟 TicketWatch
+# TicketWatch
 
 [![Platform](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&logo=windows)](https://github.com/RENOLEVES/TicketMasterBot/releases/tag/Main)
 
