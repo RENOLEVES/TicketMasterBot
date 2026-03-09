@@ -22,6 +22,8 @@ A desktop app that monitors Ticketmaster Canada for ticket availability and send
 3. Launch **TicketWatch** from the desktop shortcut
 
 ## Usage
+<img width="900" height="680" alt="d1e1a658837a4e03b45965bc73067e28" src="https://github.com/user-attachments/assets/577bbaff-b163-49c6-b855-863cb01b8041" />
+<img width="900" height="750" alt="1f9ce262403de02634f63596bc7eef13" src="https://github.com/user-attachments/assets/0a135ee4-fff8-49a7-afa3-f6ac7a3a2638" />
 
 1. Paste a **Ticketmaster Canada event URL** into the URL field
 2. Enter your **email address** for alerts
