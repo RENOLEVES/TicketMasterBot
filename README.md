@@ -1,12 +1,12 @@
 # TicketWatch
 
-[![Platform](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&logo=windows)](https://github.com/RENOLEVES/TicketMasterBot/releases/tag/Main)
+
 
 A desktop app that monitors Ticketmaster Canada for ticket availability and sends email alerts when matches are found.
 
 ## Download
 
-**[⬇ Download TicketWatch Installer (.exe)](https://github.com/RENOLEVES/TicketMasterBot/releases/tag/Main)**
+[![Platform](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&logo=windows)](https://github.com/RENOLEVES/TicketMasterBot/releases/tag/Main)
 
 > Windows x64 only
 
